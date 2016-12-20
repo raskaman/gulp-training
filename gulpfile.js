@@ -6,6 +6,7 @@ var $ = require('gulp-load-plugins')({lazy: true});
 
 gulp.task('vet', function(){
     log('Analizing source with JSHint and JSCS');
+
    return gulp
         .src(config.alljs)
         .pipe($.if(args.verbose, $.print()))
@@ -35,7 +36,39 @@ gulp.task('less-watcher', function() {
    gulp.watch([config.less], ['styles']); 
 });
 
-/////////////
+gulp.task('wiredep', function() {
+    var options = config.getWiredepDefaultOptions();
+    var wiredep = require('wiredep').stream;
+    
+    return gulp
+    .src(config.index)
+    .pipe(wiredep(options))
+    .pipe($.inject(gulp.src(config.js)))
+    .pipe(gulp.dest(config.client));
+});
+
+gulp.task('inject', ['wiredep', 'styles'], function() {
+    return gulp
+    .src(config.index)
+    .pipe($.inject(gulp.src(config.css)))
+    .pipe(gulp.dest(config.client));
+});
+
+gulp.task('serve-dev', ['inject'], function() {
+    var isDev = true;
+    var nodeOptions = {
+        script: config.nodeServer,
+        delayTime: 1,
+        env: {
+            'PORT': port,
+            'NOE_ENV': isDev ? 'dev' : 'build'
+        },
+        watch: [config.server]
+    };
+    return $.nodemon(nodeOptions);
+});
+
+///////////
 
 function clean(path, done) {
     log('Cleaning: ' + $.util.colors.blue(path));
